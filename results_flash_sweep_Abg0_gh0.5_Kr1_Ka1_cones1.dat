@@ -1,0 +1,12 @@
+# Flash intensity sweep
+# Abg=0 pA, gh=0.5 nS, Kr=1, Ka=1, Cones=1
+# FlashAmp(pA)	SpikeCount	FiringRate(Hz)
+10	27	6
+15	27	6
+20	27	6
+25	27	6
+30	27	6
+35	27	6
+40	27	6
+45	27	6
+50	27	6
