@@ -1,4 +1,4 @@
-#!/home/srsebwsl/anaconda3/envs/neuron_env/bin/python
+#!/home/srsebwsl/anaconda3/envs/neuron_env2/bin/python
 """
 A generic wrapper to access nrn binaries from a python installation
 Please create a softlink with the binary name to be called.

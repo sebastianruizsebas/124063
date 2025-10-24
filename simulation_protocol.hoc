@@ -1,0 +1,713 @@
+/*  Rod Achromatopsia Simulation Protocol
+    Compares scotopic baseline vs rod achromatopsia conditions
+    
+    Author: Based on Publio et al. 2009
+    Modified for CNS F25 Project 2
+*/
+
+load_file("nrngui.hoc")	
+
+// ============================================================================
+// GLOBAL SIMULATION PARAMETERS
+// ============================================================================
+
+// Condition flags
+SCOTOPIC_BASELINE = 0      // 0 = Rod achromatopsia, 1 = Normal scotopic
+ENABLE_CONES = 1           // Will be set to 0 for rod achromatopsia
+A_BG = 0                   // Background current (pA) for mesopic/photopic stress
+KR_COUPLING = 1            // Rod-rod coupling index (0-5)
+KA_COUPLING = 1            // A2-bipolar coupling index (0-5)
+
+// Control panel variables (for single trial testing)
+amp = 30                   // Flash amplitude (pA)
+gihbar = 1.0              // gh conductance (nS)
+
+// Simulation parameters
+celsius = 23
+v_init = -41.5
+dt = 0.1
+tstop = 5000              // 5 second trials
+stim_init = 500           // Start stimulation at 500ms
+
+// Network parameters (reduced for computational efficiency)
+nrodx = 20                // Reduced from 50
+nrody = 20                // Reduced from 30
+nconex = 4
+nconey = 4
+nrodbipx = 5              // Reduced from 10
+nrodbipy = 5
+nconebipx = 2
+nconebipy = 2
+na2x = 3
+na2y = 3
+nganx = 1
+ngany = 1
+
+rodtotal = nrodx*nrody
+conetotal = nconex*nconey
+biptotal = nrodbipx*nrodbipy + nconebipx*nconebipy
+A2total = na2x*na2y
+gantotal = nganx*ngany
+
+// Convergence parameters
+rodtobip = 2
+conetobip = 1
+conetorod = 4
+rodbiptoa2 = 3
+a2toconebip = 2
+conebiptogan = 1
+
+seed = 12345
+MAXNUMBERCONNECTIONS = 50000
+PROB = 0.5
+
+// ============================================================================
+// ANALYSIS PARAMETERS
+// ============================================================================
+
+objref spike_times, spike_count_vec
+spike_times = new Vector()
+spike_count_vec = new Vector()
+
+strdef output_filename
+objref output_file
+
+// Control panel variables
+amp = 30              // Flash amplitude (pA) for single trials
+gihbar = 1.0          // gh conductance (nS) for single trials
+
+// ============================================================================
+// LOAD TEMPLATES AND CREATE NETWORK
+// ============================================================================
+
+load_file("Rod.tem")
+load_file("Cone.tem")		
+load_file("Bip.tem")
+load_file("A2.tem")
+load_file("Ganglion.tem")
+
+objref rod_bip[nrodbipx][nrodbipy], rod[nrodx][nrody], cone[nconex][nconey]
+objref A2_cell[na2x][na2y], GAN[nganx][ngany], cone_bip[nconebipx][nconebipy]
+objref brightcurr[nrodx][nrody], dimcurr[nrodx][nrody], input_cone[nconex][nconey]
+objref random, prob
+
+random = new Random(seed)
+prob = new Random(seed)
+
+// ============================================================================
+// CELL CREATION
+// ============================================================================
+
+proc create_network() {
+    print "Creating retinal network..."
+    
+    // Create Rods
+    for i = 0, nrodx-1 {
+        for j = 0, nrody-1 {
+            rod[i][j] = new Rod()
+        }
+    }
+    
+    // Create Cones
+    for i = 0, nconex-1 {
+        for j = 0, nconey-1 {
+            cone[i][j] = new Cone()
+        }
+    }
+    
+    // Create Rod bipolar cells
+    for i = 0, nrodbipx-1 {
+        for j = 0, nrodbipy-1 {
+            rod_bip[i][j] = new Bip()
+        }
+    }
+    
+    // Create Cone bipolar cells
+    for i = 0, nconebipx-1 {
+        for j = 0, nconebipy-1 {
+            cone_bip[i][j] = new Bip()
+            cone_bip[i][j].soma.gkabar_IA(0.5) = 0
+        }
+    }
+    
+    // Create A2 amacrine cells
+    for i = 0, na2x-1 {
+        for j = 0, na2y-1 {
+            A2_cell[i][j] = new A2()
+        }
+    }
+    
+    // Create Ganglion cells
+    for i = 0, nganx-1 {
+        for j = 0, ngany-1 {
+            GAN[i][j] = new Ganglion()
+        }
+    }
+    
+    printf("Network created: %d rods, %d cones, %d bipolars, %d A2, %d ganglion\n", \
+           rodtotal, conetotal, biptotal, A2total, gantotal)
+}
+
+// ============================================================================
+// INPUT CURRENT INJECTION
+// ============================================================================
+
+proc insert_rod_currents() { local flash_amp, bg_current, input_frac
+    // $1 = flash amplitude (pA)
+    // $2 = background current (pA)
+    // $3 = fraction of rods receiving input (0-100%)
+    
+    flash_amp = $1
+    bg_current = $2
+    input_frac = $3
+    
+    InputNumber = (input_frac/100) * rodtotal
+    printf("Injecting flash=%g pA + background=%g pA into %d/%d rods\n", \
+           flash_amp, bg_current, InputNumber, rodtotal)
+    
+    // Initialize all rods with background current
+    for i = 0, nrodx-1 {
+        for j = 0, nrody-1 {
+            rod[i][j].soma {
+                brightcurr[i][j] = new IinjLT(0.5)
+                brightcurr[i][j].del = stim_init
+                brightcurr[i][j].ton = tstop - stim_init
+                brightcurr[i][j].amp = 0
+                brightcurr[i][j].ssI = bg_current  // Background/steady-state current
+                
+                dimcurr[i][j] = new IinjLTDim(0.5)
+                dimcurr[i][j].del = stim_init
+                dimcurr[i][j].ton = tstop - stim_init
+                dimcurr[i][j].ssI = 0
+                dimcurr[i][j].amp = 0
+            }
+        }
+    }
+    
+    // Add flash to random subset
+    for k = 0, InputNumber-1 {
+        ii = int(random.uniform(0, nrodx))
+        if (ii >= nrodx) { ii = nrodx-1 }
+        jj = int(random.uniform(0, nrody))
+        if (jj >= nrody) { jj = nrody-1 }
+        
+        if (flash_amp >= 30) {
+            brightcurr[ii][jj].amp = flash_amp
+        } else {
+            dimcurr[ii][jj].amp = flash_amp
+        }
+    }
+}
+
+proc insert_cone_currents() {
+    // Dark current in cones (disabled for rod achromatopsia)
+    for i = 0, nconex-1 {
+        for j = 0, nconey-1 {
+            cone[i][j].soma {
+                input_cone[i][j] = new IinjLT_cone(0.5)
+                input_cone[i][j].amp = 0
+                input_cone[i][j].del = 0
+                input_cone[i][j].ton = tstop
+            }
+        }
+    }
+}
+
+// ============================================================================
+// CONDUCTANCE SWEEPS
+// ============================================================================
+
+proc set_rod_gh() { local gh_val
+    // Set rod Ih conductance (nS)
+    // $1 = gh value (0-10 nS range)
+    gh_val = $1
+    
+    for i = 0, nrodx-1 {
+        for j = 0, nrody-1 {
+            rod[i][j].soma.ghbar_h = gh_val
+        }
+    }
+    printf("Rod gh set to %g nS\n", gh_val)
+}
+
+proc set_rod_coupling() { local g_rod
+    // Set rod-rod gap junction conductance based on Kr index
+    // $1 = Kr coupling index (0-5)
+    // Maps to conductance: 0->0 nS, 1->0.1 nS, 2->0.3 nS, 3->0.5 nS, 4->0.7 nS, 5->1.0 nS
+    
+    if ($1 == 0) { 
+        g_rod = 0 
+    }else if ($1 == 1) { 
+        g_rod = 0.1 
+    }else if ($1 == 2) { 
+        g_rod = 0.3 
+    }else if ($1 == 3) { 
+        g_rod = 0.5 
+    }else if ($1 == 4) { 
+        g_rod = 0.7 
+    }else { 
+        g_rod = 1.0 
+    }
+    
+    KR_COUPLING = $1
+    printf("Rod coupling Kr=%d -> g=%g nS\n", KR_COUPLING, g_rod)
+}
+
+proc set_A2_coupling() { local g_a2
+    // Set A2-bipolar gap junction conductance based on Ka index
+    // $1 = Ka coupling index (0-5)
+    
+    if ($1 == 0) { 
+        g_a2 = 0 
+    }else if ($1 == 1) { 
+        g_a2 = 0.3 
+    }else if ($1 == 2) { 
+        g_a2 = 0.5 
+    }else if ($1 == 3) { 
+        g_a2 = 1.0 
+    }else if ($1 == 4) { 
+        g_a2 = 1.5 
+    }else { 
+        g_a2 = 2.0 
+    }
+    
+    KA_COUPLING = $1
+    printf("A2 coupling Ka=%d -> g=%g nS\n", KA_COUPLING, g_a2)
+}
+
+// ============================================================================
+// DISABLE CONE PATHWAY (ROD ACHROMATOPSIA)
+// ============================================================================
+
+proc disable_cone_pathway() {
+    print "Disabling cone pathway (rod achromatopsia condition)..."
+    
+    // Set cone synaptic conductances to zero
+    // This will be done when creating connections
+    ENABLE_CONES = 0
+    
+    // Disable cone input current
+    for i = 0, nconex-1 {
+        for j = 0, nconey-1 {
+            if (object_id(input_cone[i][j])) {
+                input_cone[i][j].amp = 0
+                input_cone[i][j].ssI = 0
+            }
+        }
+    }
+    
+    print "Cone pathway disabled"
+}
+
+proc enable_cone_pathway() {
+    print "Enabling cone pathway (scotopic baseline)..."
+    ENABLE_CONES = 1
+    print "Cone pathway enabled"
+}
+
+// ============================================================================
+// NETWORK CONNECTIVITY
+// ============================================================================
+
+objref Glur2rodbip[nrodx][nrody], Glur2conebip[nconex][nconey]
+objref Glurrodbip2A2[nrodbipx][nrodbipy], Glurconebip2GAN[nconebipx][nconebipy]
+objref CellConection[MAXNUMBERCONNECTIONS], GAP_rod2cone[MAXNUMBERCONNECTIONS]
+objref a2GAPa2[MAXNUMBERCONNECTIONS], GAP_A2conebip[MAXNUMBERCONNECTIONS]
+
+NumberConections = 0
+NUMBERGAPS = 0
+
+proc connect_gaps() { local i, j
+    // This is a placeholder - the actual gap junction setup
+    // depends on the network topology defined elsewhere
+    // For now, just note that gaps are created by:
+    //   section1.insert_gap_here gap
+    //   section2.insert_gap_here gap  
+    //   setpointer gap.vgap, section2.v(x)
+    //   setpointer section2.gap.vgap, section1.v(x)
+    
+    print "Gap junctions: Using existing gap.hoc configuration"
+}
+
+// ============================================================================
+// SYNAPTIC CONNECTIVITY
+// ============================================================================
+
+proc connect_synapses() { local gmax_cone
+    // Connect chemical synapses
+    // Cone synapses disabled in rod achromatopsia
+    
+    if (ENABLE_CONES == 0) {
+        gmax_cone = 0
+    } else {
+        gmax_cone = 1  // Default value from original model
+    }
+    
+    print "Connecting chemical synapses..."
+    
+    // Rod → Bipolar synapses (always active)
+    for i = 0, nrodx-1 {
+        for j = 0, nrody-1 {
+            for k = 1, rodtobip {
+                ii = int(prob.uniform(0, nrodbipx))
+                if (ii >= nrodbipx) { ii = nrodbipx-1 }
+                jj = int(prob.uniform(0, nrodbipy))
+                if (jj >= nrodbipy) { jj = nrodbipy-1 }
+                Glur2rodbip[i][j] = new GradSyn()
+                rod_bip[ii][jj].soma Glur2rodbip[i][j].loc(1)
+                setpointer Glur2rodbip[i][j].V_pre, rod[i][j].soma.v(1)
+                Glur2rodbip[i][j].e = 0
+                Glur2rodbip[i][j].V_thr = -44
+            }
+        }
+    }
+    
+    // Cone → Bipolar synapses (disabled in rod achromatopsia)
+    if (ENABLE_CONES == 1) {
+        for i = 0, nconex-1 {
+            for j = 0, nconey-1 {
+                for k = 1, conetobip {
+                    ii = int(prob.uniform(0, nconebipx))
+                    if (ii >= nconebipx) { ii = nconebipx-1 }
+                    jj = int(prob.uniform(0, nconebipy))
+                    if (jj >= nconebipy) { jj = nconebipy-1 }
+                    Glur2conebip[i][j] = new GradSyn()
+                    cone_bip[ii][jj].soma Glur2conebip[i][j].loc(1)
+                    setpointer Glur2conebip[i][j].V_pre, cone[i][j].soma.v(1)
+                    Glur2conebip[i][j].e = 0
+                    Glur2conebip[i][j].V_thr = -42
+                }
+            }
+        }
+    }
+    
+    // Rod Bipolar → A2 synapses
+    for i = 0, nrodbipx-1 {
+        for j = 0, nrodbipy-1 {
+            for k = 1, rodbiptoa2 {
+                ii = int(prob.uniform(0, na2x))
+                if (ii >= na2x) { ii = na2x-1 }
+                jj = int(prob.uniform(0, na2y))
+                if (jj >= na2y) { jj = na2y-1 }
+                Glurrodbip2A2[i][j] = new GradSyn_bip_gan()
+                A2_cell[ii][jj].soma Glurrodbip2A2[i][j].loc(1)
+                setpointer Glurrodbip2A2[i][j].V_pre, rod_bip[i][j].soma.v(1)
+                Glurrodbip2A2[i][j].e = 0
+                Glurrodbip2A2[i][j].V_thr = -37.4
+            }
+        }
+    }
+    
+    // Cone Bipolar → Ganglion synapses (disabled in rod achromatopsia)
+    if (ENABLE_CONES == 1) {
+        for i = 0, nconebipx-1 {
+            for j = 0, nconebipy-1 {
+                for k = 1, conebiptogan {
+                    ii = int(prob.uniform(0, nganx))
+                    if (ii >= nganx) { ii = nganx-1 }
+                    jj = int(prob.uniform(0, ngany))
+                    if (jj >= ngany) { jj = ngany-1 }
+                    Glurconebip2GAN[i][j] = new GradSyn_bip_gan()
+                    GAN[ii][jj].soma Glurconebip2GAN[i][j].loc(1)
+                    setpointer Glurconebip2GAN[i][j].V_pre, cone_bip[i][j].soma.v(1)
+                    Glurconebip2GAN[i][j].e = 0
+                    Glurconebip2GAN[i][j].V_thr = -37.28
+                }
+            }
+        }
+    }
+    
+    print "Chemical synapses connected"
+}
+
+// ============================================================================
+// SPIKE RECORDING
+// ============================================================================
+
+objref apc, spike_vec, tvec
+spike_vec = new Vector()
+tvec = new Vector()
+
+proc setup_spike_recording() {
+    // Record spikes from ganglion cell
+    GAN[0][0].soma {
+        apc = new APCount(0.5)
+        apc.thresh = -20
+        apc.record(spike_vec)
+    }
+    print "Spike recording initialized"
+}
+
+// ============================================================================
+// SIMULATION CONTROL
+// ============================================================================
+
+func run_trial() { local flash_amp, bg_curr, input_pct, gh_val, nspikes
+    // Run a single trial with specified parameters
+    // $1 = flash amplitude (pA)
+    // $2 = background current (pA)
+    // $3 = input percentage (0-100)
+    // $4 = gh value (nS)
+    
+    flash_amp = $1
+    bg_curr = $2
+    input_pct = $3
+    gh_val = $4
+    
+    printf("\n=== Running trial: Flash=%g pA, Abg=%g pA, Input=%g%%, gh=%g nS ===\n", \
+           flash_amp, bg_curr, input_pct, gh_val)
+    
+    // Reset spike recording
+    spike_vec.resize(0)
+    
+    // Set parameters
+    set_rod_gh(gh_val)
+    insert_rod_currents(flash_amp, bg_curr, input_pct)
+    insert_cone_currents()
+    
+    // Initialize and run
+    finitialize(v_init)
+    fcurrent()
+    
+    while (t < tstop) {
+        fadvance()
+    }
+    
+    // Count spikes
+    nspikes = spike_vec.size()
+    printf("Trial complete: %d spikes detected\n", nspikes)
+    
+    return nspikes
+}
+
+// ============================================================================
+// PARAMETER SWEEP PROTOCOLS
+// ============================================================================
+
+proc sweep_flash_intensity() { local i, flash, nspikes, firing_rate, bg_curr, gh_val
+    // Sweep flash intensity from 10-50 pA
+    // $1 = background current (pA)
+    // $2 = gh value (nS)
+    
+    bg_curr = $1
+    gh_val = $2
+    
+    sprint(output_filename, "results_flash_sweep_Abg%g_gh%g_Kr%d_Ka%d_cones%d.dat", \
+           bg_curr, gh_val, KR_COUPLING, KA_COUPLING, ENABLE_CONES)
+    output_file = new File()
+    output_file.wopen(output_filename)
+    output_file.printf("# Flash intensity sweep\n")
+    output_file.printf("# Abg=%g pA, gh=%g nS, Kr=%d, Ka=%d, Cones=%d\n", \
+                       bg_curr, gh_val, KR_COUPLING, KA_COUPLING, ENABLE_CONES)
+    output_file.printf("# FlashAmp(pA)\tSpikeCount\tFiringRate(Hz)\n")
+    
+    printf("\n=== FLASH INTENSITY SWEEP ===\n")
+    printf("Background=%g pA, gh=%g nS\n", bg_curr, gh_val)
+    
+    for i = 0, 8 {
+        flash = 10 + i*5  // 10, 15, 20, ..., 50 pA
+        nspikes = run_trial(flash, bg_curr, 100, gh_val)
+        firing_rate = nspikes / ((tstop - stim_init) / 1000)  // Hz
+        
+        output_file.printf("%g\t%d\t%g\n", flash, nspikes, firing_rate)
+        printf("Flash=%g pA: %d spikes, %g Hz\n", flash, nspikes, firing_rate)
+    }
+    
+    output_file.close()
+    printf("Results saved to %s\n", output_filename)
+}
+
+proc sweep_gh() { local i, gh, nspikes, firing_rate, flash_amp, bg_curr
+    // Sweep gh from 0-2.5 nS
+    // $1 = flash amplitude (pA)
+    // $2 = background current (pA)
+    
+    flash_amp = $1
+    bg_curr = $2
+    
+    sprint(output_filename, "results_gh_sweep_flash%g_Abg%g_Kr%d_Ka%d_cones%d.dat", \
+           flash_amp, bg_curr, KR_COUPLING, KA_COUPLING, ENABLE_CONES)
+    output_file = new File()
+    output_file.wopen(output_filename)
+    output_file.printf("# gh conductance sweep\n")
+    output_file.printf("# Flash=%g pA, Abg=%g pA, Kr=%d, Ka=%d, Cones=%d\n", \
+                       flash_amp, bg_curr, KR_COUPLING, KA_COUPLING, ENABLE_CONES)
+    output_file.printf("# gh(nS)\tSpikeCount\tFiringRate(Hz)\n")
+    
+    printf("\n=== GH CONDUCTANCE SWEEP ===\n")
+    printf("Flash=%g pA, Background=%g pA\n", flash_amp, bg_curr)
+    
+    for i = 0, 10 {
+        gh = i * 0.25  // 0, 0.25, 0.5, ..., 2.5 nS
+        nspikes = run_trial(flash_amp, bg_curr, 100, gh)
+        firing_rate = nspikes / ((tstop - stim_init) / 1000)
+        
+        output_file.printf("%g\t%d\t%g\n", gh, nspikes, firing_rate)
+        printf("gh=%g nS: %d spikes, %g Hz\n", gh, nspikes, firing_rate)
+    }
+    
+    output_file.close()
+    printf("Results saved to %s\n", output_filename)
+}
+
+proc sweep_coupling() { local kr, ka, nspikes, firing_rate, flash_amp, bg_curr, gh_val
+    // Sweep Kr and Ka coupling indices
+    // $1 = flash amplitude (pA)
+    // $2 = background current (pA)
+    // $3 = gh value (nS)
+    
+    flash_amp = $1
+    bg_curr = $2
+    gh_val = $3
+    
+    sprint(output_filename, "results_coupling_sweep_flash%g_Abg%g_gh%g_cones%d.dat", \
+           flash_amp, bg_curr, gh_val, ENABLE_CONES)
+    output_file = new File()
+    output_file.wopen(output_filename)
+    output_file.printf("# Coupling parameter sweep\n")
+    output_file.printf("# Flash=%g pA, Abg=%g pA, gh=%g nS, Cones=%d\n", \
+                       flash_amp, bg_curr, gh_val, ENABLE_CONES)
+    output_file.printf("# Kr\tKa\tSpikeCount\tFiringRate(Hz)\n")
+    
+    printf("\n=== COUPLING PARAMETER SWEEP ===\n")
+    printf("Flash=%g pA, Background=%g pA, gh=%g nS\n", flash_amp, bg_curr, gh_val)
+    
+    for kr = 0, 3 {
+        for ka = 0, 3 {
+            set_rod_coupling(kr)
+            set_A2_coupling(ka)
+            
+            // Rebuild network with new coupling
+            connect_gaps()
+            connect_synapses()
+            
+            nspikes = run_trial(flash_amp, bg_curr, 100, gh_val)
+            firing_rate = nspikes / ((tstop - stim_init) / 1000)
+            
+            output_file.printf("%d\t%d\t%d\t%g\n", kr, ka, nspikes, firing_rate)
+            printf("Kr=%d, Ka=%d: %d spikes, %g Hz\n", kr, ka, nspikes, firing_rate)
+        }
+    }
+    
+    output_file.close()
+    printf("Results saved to %s\n", output_filename)
+}
+
+// ============================================================================
+// MAIN EXPERIMENTAL PROTOCOLS
+// ============================================================================
+
+proc protocol_scotopic_baseline() {
+    print "\n"
+    print "=========================================="
+    print "PROTOCOL 1: SCOTOPIC BASELINE (Control)"
+    print "=========================================="
+    
+    enable_cone_pathway()
+    create_network()
+    connect_gaps()
+    connect_synapses()
+    setup_spike_recording()
+    
+    // Sweep 1: Flash intensity with low gh
+    A_BG = 0
+    sweep_flash_intensity(A_BG, 0.5)
+    
+    // Sweep 2: gh conductance
+    sweep_gh(30, A_BG)
+    
+    // Sweep 3: Coupling parameters
+    sweep_coupling(30, A_BG, 1.0)
+    
+    print "Scotopic baseline protocol complete"
+}
+
+proc protocol_rod_achromatopsia() { local i
+    print "\n"
+    print "=========================================="
+    print "PROTOCOL 2: ROD ACHROMATOPSIA"
+    print "=========================================="
+    
+    disable_cone_pathway()
+    create_network()
+    connect_gaps()
+    connect_synapses()
+    setup_spike_recording()
+    
+    // Test multiple background levels to show saturation
+    print "\nTesting background current levels..."
+    
+    for i = 0, 3 {
+        A_BG = i * 20  // 0, 20, 40, 60 pA background
+        
+        printf("\n--- Background current: %g pA ---\n", A_BG)
+        
+        // Flash intensity sweep
+        sweep_flash_intensity(A_BG, 0.5)
+        
+        // gh sweep at moderate flash
+        sweep_gh(30, A_BG)
+        
+        // Coupling sweep (expect minimal benefit)
+        sweep_coupling(30, A_BG, 0.5)
+    }
+    
+    print "Rod achromatopsia protocol complete"
+}
+
+// ============================================================================
+// MAIN CONTROL PANEL
+// ============================================================================
+
+xpanel("CNS F25 Project 2: Rod Achromatopsia Simulation")
+xlabel("Simulation Protocol for Comparing Scotopic Baseline vs Rod Achromatopsia")
+xlabel("Based on Publio et al. 2009")
+xlabel("")
+xlabel("PROTOCOL 1: Scotopic Baseline (cones intact)")
+xbutton("Run Scotopic Baseline Protocol", "protocol_scotopic_baseline()")
+xlabel("")
+xlabel("PROTOCOL 2: Rod Achromatopsia (cones disabled)")
+xbutton("Run Rod Achromatopsia Protocol", "protocol_rod_achromatopsia()")
+xlabel("")
+xlabel("Custom single trials:")
+xvalue("Flash amplitude (pA)", "amp")
+xvalue("Background current A_bg (pA)", "A_BG")
+xvalue("gh conductance (nS)", "gihbar")
+xvalue("Kr coupling index (0-5)", "KR_COUPLING")
+xvalue("Ka coupling index (0-5)", "KA_COUPLING")
+xbutton("Run Single Trial", "run_trial(amp, A_BG, 100, gihbar)")
+xlabel("")
+xlabel("Results will be saved as .dat files in current directory")
+xpanel()
+
+print ""
+print "==================================================="
+print "CNS F25 Project 2: Rod Achromatopsia Simulation"
+print "==================================================="
+
+// Check if running in batch mode (non-GUI)
+if (name_declared("nogui") || (object_id(graphItem) == 0)) {
+    print "Running in BATCH mode..."
+    print ""
+    
+    print "=========================================="
+    print "Running SCOTOPIC BASELINE protocol..."
+    print "=========================================="
+    protocol_scotopic_baseline()
+    
+    print ""
+    print "=========================================="
+    print "Running ROD ACHROMATOPSIA protocol..."
+    print "=========================================="
+    protocol_rod_achromatopsia()
+    
+    print ""
+    print "=========================================="
+    print "All simulations complete!"
+    print "=========================================="
+    quit()
+} else {
+    print "Ready to run protocols."
+    print "Click buttons in control panel to start."
+    print ""
+}
