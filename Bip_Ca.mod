@@ -71,11 +71,6 @@ PROCEDURE states() {	: exact when v held constant
 	evaluate_fct(v)
 	c = c + c_exp * (c_inf - c)
 	m = m + m_exp * (m_inf - m)
-
-	VERBATIM
-	return 0;
-	ENDVERBATIM
-
 }
 
 UNITSOFF

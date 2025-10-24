@@ -4,7 +4,7 @@ NEURON
 {
 	SUFFIX Kx
 	
-	USEION Kx WRITE iKx VALENCE 1
+	NONSPECIFIC_CURRENT iKx
 	
 	
 	RANGE gKx, gKxbar, VhalfKx, SKx

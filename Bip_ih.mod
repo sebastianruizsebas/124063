@@ -7,8 +7,7 @@ TITLE Ih
 NEURON {
 	SUFFIX ih
 	NONSPECIFIC_CURRENT ih
-	RANGE ghbar, eh
-	GLOBAL ninf,taun
+	RANGE ghbar, eh, ninf, taun
 }
 
 

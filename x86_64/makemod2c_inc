@@ -1,0 +1,200 @@
+A2hh_k.cpp: .././A2hh_k.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "A2hh_k.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./A2hh_k.o: A2hh_k.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+A2hh_na.cpp: .././A2hh_na.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "A2hh_na.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./A2hh_na.o: A2hh_na.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Bip_Ca.cpp: .././Bip_Ca.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Bip_Ca.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Bip_Ca.o: Bip_Ca.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Bip_Cad.cpp: .././Bip_Cad.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Bip_Cad.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Bip_Cad.o: Bip_Cad.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Bip_Ka.cpp: .././Bip_Ka.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Bip_Ka.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Bip_Ka.o: Bip_Ka.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Bip_Kv.cpp: .././Bip_Kv.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Bip_Kv.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Bip_Kv.o: Bip_Kv.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Bip_ih.cpp: .././Bip_ih.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Bip_ih.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Bip_ih.o: Bip_ih.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Cone_CPR.cpp: .././Cone_CPR.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Cone_CPR.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Cone_CPR.o: Cone_CPR.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Cone_Kv.cpp: .././Cone_Kv.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Cone_Kv.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Cone_Kv.o: Cone_Kv.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Cone_ih.cpp: .././Cone_ih.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Cone_ih.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Cone_ih.o: Cone_ih.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Ganglion_hh.cpp: .././Ganglion_hh.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Ganglion_hh.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Ganglion_hh.o: Ganglion_hh.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+IinjLT.cpp: .././IinjLT.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "IinjLT.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./IinjLT.o: IinjLT.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+IinjLTDim.cpp: .././IinjLTDim.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "IinjLTDim.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./IinjLTDim.o: IinjLTDim.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+IinjLT_cone.cpp: .././IinjLT_cone.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "IinjLT_cone.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./IinjLT_cone.o: IinjLT_cone.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Rod_Ca.cpp: .././Rod_Ca.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Rod_Ca.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Rod_Ca.o: Rod_Ca.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Rod_Cad.cpp: .././Rod_Cad.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Rod_Cad.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Rod_Cad.o: Rod_Cad.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Rod_Clca.cpp: .././Rod_Clca.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Rod_Clca.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Rod_Clca.o: Rod_Clca.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Rod_Kca.cpp: .././Rod_Kca.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Rod_Kca.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Rod_Kca.o: Rod_Kca.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Rod_Kv.cpp: .././Rod_Kv.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Rod_Kv.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Rod_Kv.o: Rod_Kv.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Rod_Kx.cpp: .././Rod_Kx.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Rod_Kx.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Rod_Kx.o: Rod_Kx.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Rod_ih.cpp: .././Rod_ih.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Rod_ih.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Rod_ih.o: Rod_ih.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+Rod_leak.cpp: .././Rod_leak.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "Rod_leak.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./Rod_leak.o: Rod_leak.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+gap.cpp: .././gap.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "gap.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./gap.o: gap.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+syn_bip_gan.cpp: .././syn_bip_gan.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "syn_bip_gan.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./syn_bip_gan.o: syn_bip_gan.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+
+syn_rod_bip.cpp: .././syn_rod_bip.mod $(NOCMODL)
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "../.";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "syn_rod_bip.mod"  -o "/home/srsebwsl/Project2_Retina/Files/x86_64" )
+
+./syn_rod_bip.o: syn_rod_bip.cpp
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) /home/srsebwsl/Project2_Retina/Files/x86_64/$<\\n"
+	$(CXXCOMPILE) -I"../." $(INCLUDES) -fPIC -c "/home/srsebwsl/Project2_Retina/Files/x86_64/$<" -o $@
+

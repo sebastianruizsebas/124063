@@ -3,8 +3,8 @@
 NEURON 
 {
 	SUFFIX Kca
-	USEION Ca READ Cai VALENCE 2
-	USEION Kca WRITE iKca VALENCE 1
+	USEION ca READ cai VALENCE 2
+	NONSPECIFIC_CURRENT iKca
 	RANGE infmKcaV,taumKcaV,eKca,gKcabar,Cahalf
 }
 
@@ -25,7 +25,7 @@ PARAMETER
        :Ca-dependent K current
        eKca=-80 (mV)
        gKcabar = 5 (mS/cm2)
-       Cai
+       cai
 	Cahalf=0.32 (uM)	 
  
 
@@ -53,10 +53,10 @@ ASSIGNED
 INITIAL
 {      LOCAL Cas
 	:rate(v)
-	Cas=Cai*1000 :uM
+	Cas=cai*1000 :uM
 
 	:mKcaV= infmKcaV
-        :Cas=Cai
+        :Cas=cai
         mKcaCa=1/(1+(Cahalf/Cas)^4)
 }
 
@@ -67,7 +67,7 @@ BREAKPOINT
 {
 	LOCAL Cas
 	:SOLVE states METHOD cnexp
-	Cas=Cai*1000 :uM
+	Cas=cai*1000 :uM
 	mKcaCa=1/(1+(Cahalf/Cas)^4 )
 	:gKca=(0.001)*gKcabar*(mKcaV^2)*mKcaCa
         gKca=(0.001)*gKcabar*mKcaCa^4

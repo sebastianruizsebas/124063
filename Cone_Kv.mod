@@ -4,7 +4,7 @@ NEURON
 {
 	SUFFIX Kv_cone
 	
-	USEION Kv WRITE iKv VALENCE 1
+	NONSPECIFIC_CURRENT iKv
 	
         RANGE gKv,gKvbar, eKv
 

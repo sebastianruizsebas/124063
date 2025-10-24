@@ -5,7 +5,7 @@ NEURON
 {
 	SUFFIX Kv
 	
-	USEION Kv WRITE iKv VALENCE 1
+	NONSPECIFIC_CURRENT iKv
 		
         RANGE  gKvbar, eKv
 	

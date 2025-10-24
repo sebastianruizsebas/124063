@@ -5,7 +5,7 @@ NEURON
 {
 	SUFFIX Ca
 	
-	USEION Ca WRITE iCa VALENCE 2
+	USEION ca WRITE ica VALENCE 2
         RANGE gCabar,VhalfCam,SCam
         RANGE VhalfCah,SCah
         RANGE eCa,aomCa,bomCa
@@ -58,7 +58,7 @@ ASSIGNED
     
 	v (mV)
 	
-	iCa (mA/cm2)
+	ica (mA/cm2)
 
 	infmCa
 	taumCa  (ms) 
@@ -89,7 +89,7 @@ BREAKPOINT
 	gCa = (0.001)*gCabar*mCa*hCa
 	: g is in unit of S/cm2 ,i is in unit of mA/cm2 and v is in mV
 	
-	iCa = gCa*(v - eCa)
+	ica = gCa*(v - eCa)
 	: the current is in the unit of mA/cm2
 	
 	

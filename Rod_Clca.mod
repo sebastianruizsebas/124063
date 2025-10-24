@@ -4,9 +4,9 @@ NEURON
 {
 	SUFFIX Clca
 		
-	USEION Ca READ Cai VALENCE 2
+	USEION ca READ cai VALENCE 2
 	
-	USEION Cl WRITE iCl  VALENCE 1
+	USEION cl WRITE icl VALENCE -1
 	
 	RANGE gClbar, eCl, Clh
 	
@@ -29,7 +29,7 @@ PARAMETER
        gClbar = 1.3 (mS/cm2) <0,1e9>
        
        Clh = 1.5 (uM )
-       Cai   (mM)
+       cai   (mM)
        
 
 }
@@ -43,7 +43,7 @@ STATE
 ASSIGNED
 {
 	v (mV)
-	iCl (mA/cm2)
+	icl (mA/cm2)
 	:mCl
 	: the paremeter for activation
         gCl (mho/cm2)
@@ -62,10 +62,10 @@ INITIAL
 BREAKPOINT
 {       LOCAL Cas
  
-	Cas=Cai*1000  	
+	Cas=cai*1000  	
 	mCl = 1/(  1+(Clh/Cas)^4 ) 
 	gCl = (0.001)* gClbar * mCl
-	iCl = gCl*(v-eCl)   
+	icl = gCl*(v-eCl)   
 		
 	: the current is in the unit of mA/cm2
 }

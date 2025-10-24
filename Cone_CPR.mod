@@ -4,9 +4,9 @@ NEURON
 {
 	SUFFIX CPR
 	
-	USEION Ca WRITE iCa VALENCE 2
-	USEION Cl WRITE iCl  VALENCE 1
-	USEION Kca WRITE iKca VALENCE 1
+	USEION ca WRITE ica VALENCE 2
+	USEION cl WRITE icl VALENCE -1
+	NONSPECIFIC_CURRENT iKca
 	
 	NONSPECIFIC_CURRENT il, iCGMP
 	
@@ -84,9 +84,9 @@ ASSIGNED
 {
 	v (mV)
 	
-	iCa (mA/cm2)
+	ica (mA/cm2)
 	il  (mA/cm2)
-             iCl  (mA/cm2)
+             icl  (mA/cm2)
              iCGMP (mA/cm2) 
              iKca (mA/cm2) 
               
@@ -125,16 +125,16 @@ BREAKPOINT
 {
 	SOLVE states METHOD cnexp
 	gCa = (0.001)*gCabar*nCa
-	iCa = gCa*(v - eCa)
+	ica = gCa*(v - eCa)
 	
 	UNITSOFF
-	:if (iCa >= 0) 
+	:if (ica >= 0) 
 	:{
 	:	Cas =0
 	:}
-	:if (iCa < 0) 
+	:if (ica < 0) 
 	:{
-		Cas =-0.2+FactorCaI * (-iCa) * 1 *  0.5         /(1.6e-19)/  (6.023e23) * 1e-6         *1e14    
+		Cas =-0.2+FactorCaI * (-ica) * 1 *  0.5         /(1.6e-19)/  (6.023e23) * 1e-6         *1e14    
 	:                  mA/cm2 * ms-> n coul/cm2  ->n e /cm2-> nmol/cm2  -> mol /cm2     scale factor
 	: all the calculation without consideration of volume
          :    }
@@ -143,7 +143,7 @@ BREAKPOINT
 	
 	mCl = 1/(1+ exp ( (Clh - Cas)/ SCl  ) ) 
 	gCl = (0.001)* gClbar * mCl
-	iCl = gCl*(v-eCl)   
+	icl = gCl*(v-eCl)   
 	
 	mKca1=Cas/(Cas+0.3)
 	gKca=(0.001)*gKcabar*mKca*mKca*mKca1

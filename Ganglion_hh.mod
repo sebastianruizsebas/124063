@@ -99,11 +99,6 @@ PROCEDURE states() {	: exact when v held constant
 	p = p + p_exp * (p_inf - p)
 	q = q + q_exp * (q_inf - q)
 	c = c + c_exp * (c_inf - c)
-
-	VERBATIM
-	return 0;
-	ENDVERBATIM
-
 }
 
 UNITSOFF
