@@ -1,0 +1,14 @@
+# gh conductance sweep
+# Flash=30 pA, Abg=0 pA, Kr=1, Ka=1, Cones=1
+# gh(nS)	SpikeCount	FiringRate(Hz)
+0	27	6
+0.25	27	6
+0.5	27	6
+0.75	27	6
+1	27	6
+1.25	27	6
+1.5	27	6
+1.75	27	6
+2	27	6
+2.25	27	6
+2.5	27	6

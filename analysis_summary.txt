@@ -1,0 +1,49 @@
+================================================================================
+Rod Achromatopsia Simulation Analysis Summary
+CNS F25 Project 2
+================================================================================
+
+SCOTOPIC BASELINE (Cones ON)
+--------------------------------------------------------------------------------
+
+File: results_flash_sweep_Abg0_gh0.5_Kr1_Ka1_cones1.dat
+  Abg = 0.0 pA, gh = 0.5 nS, Kr = 1, Ka = 1
+  Dynamic Range A = 0.000
+  Power Law: F = 6.000 * I^0.000
+  Fit Quality: R² = 0.000, RMSE = 0.000
+
+
+ROD ACHROMATOPSIA (Cones OFF)
+--------------------------------------------------------------------------------
+
+File: results_flash_sweep_Abg0_gh0.5_Kr3_Ka3_cones0.dat
+  Abg = 0.0 pA, gh = 0.5 nS, Kr = 3, Ka = 3
+  Dynamic Range A = nan
+  Power Law: F = nan * I^nan
+  Fit Quality: R² = nan, RMSE = nan
+
+File: results_flash_sweep_Abg20_gh0.5_Kr3_Ka3_cones0.dat
+  Abg = 20.0 pA, gh = 0.5 nS, Kr = 3, Ka = 3
+  Dynamic Range A = nan
+  Power Law: F = nan * I^nan
+  Fit Quality: R² = nan, RMSE = nan
+
+File: results_flash_sweep_Abg40_gh0.5_Kr3_Ka3_cones0.dat
+  Abg = 40.0 pA, gh = 0.5 nS, Kr = 3, Ka = 3
+  Dynamic Range A = nan
+  Power Law: F = nan * I^nan
+  Fit Quality: R² = nan, RMSE = nan
+
+File: results_flash_sweep_Abg60_gh0.5_Kr3_Ka3_cones0.dat
+  Abg = 60.0 pA, gh = 0.5 nS, Kr = 3, Ka = 3
+  Dynamic Range A = nan
+  Power Law: F = nan * I^nan
+  Fit Quality: R² = nan, RMSE = nan
+
+
+COMPARISON
+--------------------------------------------------------------------------------
+Average Dynamic Range:
+  Scotopic: 0.000
+  Achromatopsia: nan
+  Reduction: nan%
