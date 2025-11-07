@@ -291,6 +291,12 @@ objref fih_noise
 proc setup_noise_update() {
     fih_noise = new FInitializeHandler("update_gaussian_noise()")
 }
+
+// ============================================================================
+// CONE INPUT CURRENTS
+// ============================================================================
+
+proc insert_cone_currents() {
     // Dark current in cones (disabled for rod achromatopsia)
     for i = 0, nconex-1 {
         for j = 0, nconey-1 {
@@ -741,7 +747,7 @@ proc sweep_coupling() { local kr, ka, nspikes, firing_rate, flash_amp, bg_curr, 
 // GAP JUNCTION COUPLING SWEEP PROTOCOL
 // ============================================================================
 
-proc protocol_coupling_sweep() { local g_gap, intensity_idx, trial_idx, flash_amp, nspikes, mean_resp, std_resp
+proc protocol_coupling_sweep() { local g_gap, intensity_idx, trial_idx, flash_amp, nspikes, mean_resp, std_resp, g_idx, int_idx, trial_seed, firing_rate, ln_resp, n_trials
     // Main experimental protocol: sweep gap junction conductance
     // Measure dose-response with multiple trials per condition
     
