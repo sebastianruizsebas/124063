@@ -95,6 +95,9 @@ objref ln_filter_output, ln_response_vec
 ln_filter_output = new Vector()
 ln_response_vec = new Vector()
 
+// Global vectors for coupling sweep
+objref intensity_vec, g_gap_vec, g_gap_vec_robust
+
 // ============================================================================
 // LOAD TEMPLATES AND CREATE NETWORK
 // ============================================================================
@@ -746,12 +749,10 @@ proc protocol_coupling_sweep() { local g_gap, intensity_idx, trial_idx, flash_am
     setup_spike_recording()
     
     // Stimulus intensities (pA) - logarithmic spacing from dark to saturating
-    objref intensity_vec
     intensity_vec = new Vector()
     intensity_vec.append(0, 5, 10, 15, 20, 25, 30, 35, 40, 50, 60, 80, 100)
     
     // Gap junction conductance values (nS) - 0 to 5 nS in 0.25 nS steps
-    objref g_gap_vec
     g_gap_vec = new Vector()
     { local g_gap_temp
         for g_gap_temp = 0; g_gap_temp <= 5.0; g_gap_temp = g_gap_temp + 0.25 {
@@ -854,7 +855,6 @@ proc protocol_coupling_sweep_alternate_noise() { local old_sigma
     
     // Run abbreviated sweep (fewer coupling values and trials)
     // Modify g_gap_vec to test only key values: 0, 1, 2.5, 5 nS
-    objref g_gap_vec_robust
     g_gap_vec_robust = new Vector()
     g_gap_vec_robust.append(0, 1.0, 2.5, 5.0)
     
