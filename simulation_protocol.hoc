@@ -750,7 +750,19 @@ proc protocol_coupling_sweep() { local g_gap, intensity_idx, trial_idx, flash_am
     
     // Stimulus intensities (pA) - logarithmic spacing from dark to saturating
     intensity_vec = new Vector()
-    intensity_vec.append(0, 5, 10, 15, 20, 25, 30, 35, 40, 50, 60, 80, 100)
+    intensity_vec.append(0)
+    intensity_vec.append(5)
+    intensity_vec.append(10)
+    intensity_vec.append(15)
+    intensity_vec.append(20)
+    intensity_vec.append(25)
+    intensity_vec.append(30)
+    intensity_vec.append(35)
+    intensity_vec.append(40)
+    intensity_vec.append(50)
+    intensity_vec.append(60)
+    intensity_vec.append(80)
+    intensity_vec.append(100)
     
     // Gap junction conductance values (nS) - 0 to 5 nS in 0.25 nS steps
     g_gap_vec = new Vector()
@@ -856,7 +868,10 @@ proc protocol_coupling_sweep_alternate_noise() { local old_sigma
     // Run abbreviated sweep (fewer coupling values and trials)
     // Modify g_gap_vec to test only key values: 0, 1, 2.5, 5 nS
     g_gap_vec_robust = new Vector()
-    g_gap_vec_robust.append(0, 1.0, 2.5, 5.0)
+    g_gap_vec_robust.append(0)
+    g_gap_vec_robust.append(1.0)
+    g_gap_vec_robust.append(2.5)
+    g_gap_vec_robust.append(5.0)
     
     n_trials_robust = 50  // Reduced for speed
     
