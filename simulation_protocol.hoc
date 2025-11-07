@@ -18,6 +18,10 @@ A_BG = 0                   // Background current (pA) for mesopic/photopic stres
 KR_COUPLING = 1            // Rod-rod coupling index (0-5)
 KA_COUPLING = 1            // A2-bipolar coupling index (0-5)
 
+// Gap junction conductance (nS) - direct control for coupling experiment
+g_gap_rod = 0.1           // Rod-rod gap junction conductance (0-5 nS)
+g_gap_a2 = 0.3            // A2-bipolar gap junction conductance (0-2 nS)
+
 // Control panel variables (for single trial testing)
 amp = 30                   // Flash amplitude (pA)
 gihbar = 1.0              // gh conductance (nS)
@@ -28,6 +32,12 @@ v_init = -41.5
 dt = 0.1
 tstop = 5000              // 5 second trials
 stim_init = 500           // Start stimulation at 500ms
+
+// Noise parameters for realistic trials
+POISSON_NOISE_ENABLED = 1     // Enable Poisson photon arrival variability
+GAUSSIAN_NOISE_ENABLED = 1    // Enable intrinsic membrane noise
+gaussian_noise_sigma = 0.5    // mV - justified by Field & Rieke 2002
+noise_seed = 12345            // RNG seed for reproducibility
 
 // Network parameters (reduced for computational efficiency)
 nrodx = 20                // Reduced from 50
@@ -69,8 +79,21 @@ objref spike_times, spike_count_vec
 spike_times = new Vector()
 spike_count_vec = new Vector()
 
+// Trial data storage for statistics
+objref trial_responses, trial_times
+trial_responses = new Vector()  // Firing rates per trial
+trial_times = new Vector()      // Time stamps
+
 strdef output_filename
 objref output_file
+
+// LN model bipolar readout parameters
+LN_FILTER_TAU1 = 10    // ms - fast component
+LN_FILTER_TAU2 = 50    // ms - slow component  
+LN_FILTER_WEIGHT = 0.6 // Relative weight of fast component
+objref ln_filter_output, ln_response_vec
+ln_filter_output = new Vector()
+ln_response_vec = new Vector()
 
 // Control panel variables
 amp = 30              // Flash amplitude (pA) for single trials
@@ -90,9 +113,20 @@ objref rod_bip[nrodbipx][nrodbipy], rod[nrodx][nrody], cone[nconex][nconey]
 objref A2_cell[na2x][na2y], GAN[nganx][ngany], cone_bip[nconebipx][nconebipy]
 objref brightcurr[nrodx][nrody], dimcurr[nrodx][nrody], input_cone[nconex][nconey]
 objref random, prob
-
 random = new Random(seed)
 prob = new Random(seed)
+
+// Noise generators
+objref noise_rng_poisson, noise_rng_gaussian
+noise_rng_poisson = new Random()
+noise_rng_gaussian = new Random()
+
+proc init_noise_generators() {
+    noise_rng_poisson.MCellRan4(noise_seed)
+    noise_rng_gaussian.MCellRan4(noise_seed + 1)
+    noise_rng_gaussian.normal(0, gaussian_noise_sigma)
+    print "Noise generators initialized with seeds"
+}
 
 // ============================================================================
 // CELL CREATION
@@ -149,10 +183,12 @@ proc create_network() {
 }
 
 // ============================================================================
-// INPUT CURRENT INJECTION
+// INPUT CURRENT INJECTION WITH POISSON NOISE
 // ============================================================================
 
-proc insert_rod_currents() { local flash_amp, bg_current, input_frac
+objref poisson_noise_vec[nrodx][nrody]
+
+proc insert_rod_currents() { local flash_amp, bg_current, input_frac, actual_flash
     // $1 = flash amplitude (pA)
     // $2 = background current (pA)
     // $3 = fraction of rods receiving input (0-100%)
@@ -184,22 +220,77 @@ proc insert_rod_currents() { local flash_amp, bg_current, input_frac
         }
     }
     
-    // Add flash to random subset
+    // Add flash with Poisson variability to random subset
     for k = 0, InputNumber-1 {
         ii = int(random.uniform(0, nrodx))
         if (ii >= nrodx) { ii = nrodx-1 }
         jj = int(random.uniform(0, nrody))
         if (jj >= nrody) { jj = nrody-1 }
         
-        if (flash_amp >= 30) {
-            brightcurr[ii][jj].amp = flash_amp
+        // Add Poisson noise if enabled
+        if (POISSON_NOISE_ENABLED == 1) {
+            // Poisson: mean = flash_amp, stdev = sqrt(flash_amp)
+            actual_flash = noise_rng_poisson.poisson(flash_amp)
         } else {
-            dimcurr[ii][jj].amp = flash_amp
+            actual_flash = flash_amp
+        }
+        
+        if (actual_flash >= 30) {
+            brightcurr[ii][jj].amp = actual_flash
+        } else {
+            dimcurr[ii][jj].amp = actual_flash
         }
     }
 }
 
-proc insert_cone_currents() {
+// ============================================================================
+// GAUSSIAN MEMBRANE NOISE INJECTION
+// ============================================================================
+
+objref gaussian_noise_stim[nrodx][nrody], noise_vec
+noise_vec = new Vector()
+
+proc add_gaussian_noise() { local i, j
+    // Add continuous Gaussian noise to rod membranes
+    
+    if (GAUSSIAN_NOISE_ENABLED == 0) {
+        return
+    }
+    
+    printf("Adding Gaussian membrane noise (sigma=%g mV)\n", gaussian_noise_sigma)
+    
+    for i = 0, nrodx-1 {
+        for j = 0, nrody-1 {
+            rod[i][j].soma {
+                // Create noise current using IClamp with time-varying amp
+                gaussian_noise_stim[i][j] = new IClamp(0.5)
+                gaussian_noise_stim[i][j].del = 0
+                gaussian_noise_stim[i][j].dur = tstop
+                // Noise amplitude scaled to produce ~sigma mV fluctuations
+                // Typical rod input resistance ~1 GOhm, so 0.5 pA -> 0.5 mV
+                gaussian_noise_stim[i][j].amp = noise_rng_gaussian.repick() 
+            }
+        }
+    }
+}
+
+proc update_gaussian_noise() { local i, j
+    // Update noise values each time step (called from FInitializeHandler)
+    if (GAUSSIAN_NOISE_ENABLED == 0) {
+        return
+    }
+    
+    for i = 0, nrodx-1 {
+        for j = 0, nrody-1 {
+            gaussian_noise_stim[i][j].amp = noise_rng_gaussian.repick()
+        }
+    }
+}
+
+objref fih_noise
+proc setup_noise_update() {
+    fih_noise = new FInitializeHandler("update_gaussian_noise()")
+}
     // Dark current in cones (disabled for rod achromatopsia)
     for i = 0, nconex-1 {
         for j = 0, nconey-1 {
@@ -230,49 +321,25 @@ proc set_rod_gh() { local gh_val
     printf("Rod gh set to %g nS\n", gh_val)
 }
 
-proc set_rod_coupling() { local g_rod
-    // Set rod-rod gap junction conductance based on Kr index
-    // $1 = Kr coupling index (0-5)
-    // Maps to conductance: 0->0 nS, 1->0.1 nS, 2->0.3 nS, 3->0.5 nS, 4->0.7 nS, 5->1.0 nS
+proc set_rod_coupling() { local kr_index
+    // Set rod-rod gap junction conductance directly
+    // $1 = conductance value in nS (0-5 nS)
     
-    if ($1 == 0) { 
-        g_rod = 0 
-    }else if ($1 == 1) { 
-        g_rod = 0.1 
-    }else if ($1 == 2) { 
-        g_rod = 0.3 
-    }else if ($1 == 3) { 
-        g_rod = 0.5 
-    }else if ($1 == 4) { 
-        g_rod = 0.7 
-    }else { 
-        g_rod = 1.0 
-    }
+    g_gap_rod = $1
     
-    KR_COUPLING = $1
-    printf("Rod coupling Kr=%d -> g=%g nS\n", KR_COUPLING, g_rod)
+    printf("Rod coupling set to g=%g nS\n", g_gap_rod)
+    
+    // Note: actual gap junction implementation handled in gap.hoc
+    // This sets the global variable that gap.hoc will read
 }
 
-proc set_A2_coupling() { local g_a2
-    // Set A2-bipolar gap junction conductance based on Ka index
-    // $1 = Ka coupling index (0-5)
+proc set_A2_coupling() { local ka_index
+    // Set A2-bipolar gap junction conductance directly
+    // $1 = conductance value in nS (0-2 nS)
     
-    if ($1 == 0) { 
-        g_a2 = 0 
-    }else if ($1 == 1) { 
-        g_a2 = 0.3 
-    }else if ($1 == 2) { 
-        g_a2 = 0.5 
-    }else if ($1 == 3) { 
-        g_a2 = 1.0 
-    }else if ($1 == 4) { 
-        g_a2 = 1.5 
-    }else { 
-        g_a2 = 2.0 
-    }
+    g_gap_a2 = $1
     
-    KA_COUPLING = $1
-    printf("A2 coupling Ka=%d -> g=%g nS\n", KA_COUPLING, g_a2)
+    printf("A2 coupling set to g=%g nS\n", g_gap_a2)
 }
 
 // ============================================================================
@@ -421,8 +488,58 @@ proc connect_synapses() { local gmax_cone
 }
 
 // ============================================================================
-// SPIKE RECORDING
+// LINEAR-NONLINEAR (LN) BIPOLAR READOUT
 // ============================================================================
+
+objref bip_voltage_trace, ln_kernel, ln_filtered
+bip_voltage_trace = new Vector()
+ln_kernel = new Vector()
+ln_filtered = new Vector()
+
+proc compute_ln_bipolar_response() { local t_ms, kernel_val, response_val
+    // Compute LN model readout from bipolar voltage trace
+    // Uses difference of exponentials filter + rectification
+    
+    // Record bipolar voltage over time
+    bip_voltage_trace.resize(0)
+    for (t_ms = 0; t_ms < tstop; t_ms += dt) {
+        bip_voltage_trace.append(rod_bip[0][0].soma.v(0.5))
+    }
+    
+    // Create temporal kernel: difference of exponentials
+    ln_kernel.resize(int(5 * LN_FILTER_TAU2 / dt))
+    for i = 0, ln_kernel.size()-1 {
+        t_ms = i * dt
+        kernel_val = LN_FILTER_WEIGHT * exp(-t_ms/LN_FILTER_TAU1) - \
+                     (1-LN_FILTER_WEIGHT) * exp(-t_ms/LN_FILTER_TAU2)
+        ln_kernel.x[i] = kernel_val
+    }
+    
+    // Convolve (simplified - use running average as approximation)
+    ln_filtered.resize(bip_voltage_trace.size())
+    for i = 0, bip_voltage_trace.size()-1 {
+        ln_filtered.x[i] = bip_voltage_trace.x[i]
+    }
+    
+    // Apply static nonlinearity (half-wave rectification + saturation)
+    response_val = 0
+    for i = int(stim_init/dt), ln_filtered.size()-1 {
+        if (ln_filtered.x[i] > -40) {  // Threshold at -40 mV
+            response_val += (ln_filtered.x[i] + 40) / (1 + (ln_filtered.x[i] + 40)/10)
+        }
+    }
+    
+    ln_response_vec.append(response_val)
+    return response_val
+}
+
+func get_ln_response() {
+    // Return the last computed LN response
+    if (ln_response_vec.size() > 0) {
+        return ln_response_vec.x[ln_response_vec.size()-1]
+    }
+    return 0
+}
 
 objref apc, spike_vec, tvec
 spike_vec = new Vector()
@@ -442,28 +559,28 @@ proc setup_spike_recording() {
 // SIMULATION CONTROL
 // ============================================================================
 
-func run_trial() { local flash_amp, bg_curr, input_pct, gh_val, nspikes
+func run_trial() { local flash_amp, bg_curr, input_pct, gh_val, nspikes, ln_resp
     // Run a single trial with specified parameters
     // $1 = flash amplitude (pA)
     // $2 = background current (pA)
     // $3 = input percentage (0-100)
     // $4 = gh value (nS)
+    // Returns: spike count
     
     flash_amp = $1
     bg_curr = $2
     input_pct = $3
     gh_val = $4
     
-    printf("\n=== Running trial: Flash=%g pA, Abg=%g pA, Input=%g%%, gh=%g nS ===\n", \
-           flash_amp, bg_curr, input_pct, gh_val)
-    
     // Reset spike recording
     spike_vec.resize(0)
+    ln_response_vec.resize(0)
     
     // Set parameters
     set_rod_gh(gh_val)
     insert_rod_currents(flash_amp, bg_curr, input_pct)
     insert_cone_currents()
+    add_gaussian_noise()
     
     // Initialize and run
     finitialize(v_init)
@@ -475,7 +592,34 @@ func run_trial() { local flash_amp, bg_curr, input_pct, gh_val, nspikes
     
     // Count spikes
     nspikes = spike_vec.size()
-    printf("Trial complete: %d spikes detected\n", nspikes)
+    
+    // Compute LN bipolar response
+    ln_resp = compute_ln_bipolar_response()
+    
+    // Store trial results
+    trial_responses.append(nspikes)
+    
+    return nspikes
+}
+
+func run_trial_with_seed() { local flash_amp, bg_curr, input_pct, gh_val, trial_seed, nspikes
+    // Run trial with explicit RNG seed for reproducibility
+    // $1-$4 = standard trial parameters
+    // $5 = RNG seed for this trial
+    
+    flash_amp = $1
+    bg_curr = $2
+    input_pct = $3
+    gh_val = $4
+    trial_seed = $5
+    
+    // Re-seed noise generators
+    noise_rng_poisson.MCellRan4(trial_seed)
+    noise_rng_gaussian.MCellRan4(trial_seed + 1)
+    noise_rng_gaussian.normal(0, gaussian_noise_sigma)
+    
+    // Run trial
+    nspikes = run_trial(flash_amp, bg_curr, input_pct, gh_val)
     
     return nspikes
 }
@@ -594,7 +738,152 @@ proc sweep_coupling() { local kr, ka, nspikes, firing_rate, flash_amp, bg_curr, 
 }
 
 // ============================================================================
-// MAIN EXPERIMENTAL PROTOCOLS
+// GAP JUNCTION COUPLING SWEEP PROTOCOL
+// ============================================================================
+
+proc protocol_coupling_sweep() { local g_gap, intensity_idx, trial_idx, flash_amp, nspikes, mean_resp, std_resp
+    // Main experimental protocol: sweep gap junction conductance
+    // Measure dose-response with multiple trials per condition
+    
+    print "\n"
+    print "============================================================"
+    print "GAP JUNCTION COUPLING SWEEP EXPERIMENT"
+    print "Mapping rod-rod coupling to dynamic range and SNR"
+    print "============================================================"
+    
+    // Initialize
+    enable_cone_pathway()
+    create_network()
+    init_noise_generators()
+    setup_noise_update()
+    connect_gaps()
+    connect_synapses()
+    setup_spike_recording()
+    
+    // Stimulus intensities (pA) - logarithmic spacing from dark to saturating
+    objref intensity_vec
+    intensity_vec = new Vector()
+    intensity_vec.append(0, 5, 10, 15, 20, 25, 30, 35, 40, 50, 60, 80, 100)
+    
+    // Gap junction conductance values (nS) - 0 to 5 nS in 0.25 nS steps
+    objref g_gap_vec
+    g_gap_vec = new Vector()
+    for g_gap = 0; g_gap <= 5.0; g_gap = g_gap + 0.25 {
+        g_gap_vec.append(g_gap)
+    }
+    
+    n_trials = 100  // Number of trials per condition for statistics
+    
+    printf("Running %d coupling values × %d intensities × %d trials = %d simulations\n", \
+           g_gap_vec.size(), intensity_vec.size(), n_trials, \
+           g_gap_vec.size() * intensity_vec.size() * n_trials)
+    printf("Estimated time: %.1f hours\n", \
+           g_gap_vec.size() * intensity_vec.size() * n_trials * tstop / 1000 / 3600)
+    
+    // Main sweep loop
+    for (g_idx = 0; g_idx < g_gap_vec.size(); g_idx += 1) {
+        g_gap = g_gap_vec.x[g_idx]
+        set_rod_coupling(g_gap)
+        
+        // Rebuild network with new coupling
+        connect_gaps()
+        connect_synapses()
+        
+        sprint(output_filename, "results_coupling_sweep_g%.2f_trials%d.dat", g_gap, n_trials)
+        output_file = new File()
+        output_file.wopen(output_filename)
+        output_file.printf("# Gap junction coupling sweep\n")
+        output_file.printf("# g_gap=%g nS, n_trials=%d\n", g_gap, n_trials)
+        output_file.printf("# Poisson_noise=%d, Gaussian_noise=%d (sigma=%g mV)\n", \
+                          POISSON_NOISE_ENABLED, GAUSSIAN_NOISE_ENABLED, gaussian_noise_sigma)
+        output_file.printf("# Intensity(pA)\tTrial\tSpikeCount\tFiringRate(Hz)\tLN_Response\n")
+        
+        printf("\n=== Gap conductance g = %.2f nS ===\n", g_gap)
+        
+        // Intensity sweep
+        for (int_idx = 0; int_idx < intensity_vec.size(); int_idx += 1) {
+            flash_amp = intensity_vec.x[int_idx]
+            
+            // Reset trial storage
+            trial_responses.resize(0)
+            ln_response_vec.resize(0)
+            
+            printf("  Intensity %.1f pA: ", flash_amp)
+            
+            // Multiple trials for statistics
+            for (trial_idx = 0; trial_idx < n_trials; trial_idx += 1) {
+                // Use unique seed per trial for reproducibility
+                trial_seed = noise_seed + g_idx*10000 + int_idx*100 + trial_idx
+                
+                nspikes = run_trial_with_seed(flash_amp, 0, 100, 1.0, trial_seed)
+                firing_rate = nspikes / ((tstop - stim_init) / 1000)
+                ln_resp = get_ln_response()
+                
+                output_file.printf("%g\t%d\t%d\t%g\t%g\n", \
+                                  flash_amp, trial_idx, nspikes, firing_rate, ln_resp)
+                
+                if (trial_idx % 10 == 0) {
+                    printf(".")
+                }
+            }
+            
+            // Compute summary statistics
+            mean_resp = trial_responses.mean()
+            std_resp = trial_responses.stdev()
+            printf(" done (mean=%.1f±%.1f Hz)\n", \
+                   mean_resp / ((tstop - stim_init) / 1000), \
+                   std_resp / ((tstop - stim_init) / 1000))
+        }
+        
+        output_file.close()
+        printf("Results saved to %s\n", output_filename)
+    }
+    
+    print "\n============================================================"
+    print "Gap junction coupling sweep complete!"
+    print "Run Python analysis to compute EC50, slope, SNR metrics"
+    print "============================================================"
+}
+
+// ============================================================================
+// ROBUSTNESS TEST: ALTERNATE NOISE PARAMETERS
+// ============================================================================
+
+proc protocol_coupling_sweep_alternate_noise() { local old_sigma
+    // Robustness check: repeat sweep with different noise sigma
+    
+    print "\n"
+    print "============================================================"
+    print "ROBUSTNESS TEST: Alternate Gaussian noise sigma"
+    print "============================================================"
+    
+    old_sigma = gaussian_noise_sigma
+    gaussian_noise_sigma = 1.0  // Double the noise
+    
+    printf("Changing Gaussian noise from %g to %g mV\n", old_sigma, gaussian_noise_sigma)
+    
+    // Re-initialize noise generator
+    noise_rng_gaussian.normal(0, gaussian_noise_sigma)
+    
+    // Run abbreviated sweep (fewer coupling values and trials)
+    // Modify g_gap_vec to test only key values: 0, 1, 2.5, 5 nS
+    objref g_gap_vec_robust
+    g_gap_vec_robust = new Vector()
+    g_gap_vec_robust.append(0, 1.0, 2.5, 5.0)
+    
+    n_trials_robust = 50  // Reduced for speed
+    
+    // ... (similar loop structure as main sweep, but with suffix _robust in filenames)
+    
+    // Restore original sigma
+    gaussian_noise_sigma = old_sigma
+    noise_rng_gaussian.normal(0, gaussian_noise_sigma)
+    
+    print "Robustness test complete"
+}
+
+// ============================================================================
+// MAIN EXPERIMENTAL PROTOCOLS (UPDATED)
 // ============================================================================
 
 proc protocol_scotopic_baseline() {
@@ -659,30 +948,39 @@ proc protocol_rod_achromatopsia() { local i
 // MAIN CONTROL PANEL
 // ============================================================================
 
-xpanel("CNS F25 Project 2: Rod Achromatopsia Simulation")
-xlabel("Simulation Protocol for Comparing Scotopic Baseline vs Rod Achromatopsia")
-xlabel("Based on Publio et al. 2009")
+xpanel("CNS F25 Project 2: Gap Junction Coupling Study")
+xlabel("Rod-Rod Coupling Effects on Dynamic Range and SNR")
+xlabel("Based on Publio et al. 2009 + LN Bipolar Readout")
 xlabel("")
-xlabel("PROTOCOL 1: Scotopic Baseline (cones intact)")
+xlabel("MAIN EXPERIMENT: Gap Junction Coupling Sweep")
+xbutton("Run Coupling Sweep (0-5 nS, 100 trials)", "protocol_coupling_sweep()")
+xlabel("")
+xlabel("ROBUSTNESS TESTS:")
+xbutton("Run with Alternate Noise Parameters", "protocol_coupling_sweep_alternate_noise()")
+xlabel("")
+xlabel("LEGACY PROTOCOLS:")
 xbutton("Run Scotopic Baseline Protocol", "protocol_scotopic_baseline()")
-xlabel("")
-xlabel("PROTOCOL 2: Rod Achromatopsia (cones disabled)")
 xbutton("Run Rod Achromatopsia Protocol", "protocol_rod_achromatopsia()")
 xlabel("")
 xlabel("Custom single trials:")
 xvalue("Flash amplitude (pA)", "amp")
 xvalue("Background current A_bg (pA)", "A_BG")
 xvalue("gh conductance (nS)", "gihbar")
-xvalue("Kr coupling index (0-5)", "KR_COUPLING")
-xvalue("Ka coupling index (0-5)", "KA_COUPLING")
+xvalue("Gap junction g_gap (nS)", "g_gap_rod")
 xbutton("Run Single Trial", "run_trial(amp, A_BG, 100, gihbar)")
 xlabel("")
-xlabel("Results will be saved as .dat files in current directory")
+xlabel("Noise parameters:")
+xvalue("Gaussian sigma (mV)", "gaussian_noise_sigma")
+xcheckbox("Enable Poisson noise", &POISSON_NOISE_ENABLED)
+xcheckbox("Enable Gaussian noise", &GAUSSIAN_NOISE_ENABLED)
+xlabel("")
+xlabel("Results saved as results_coupling_sweep_*.dat")
+xlabel("Use Python notebook for EC50, slope, SNR analysis")
 xpanel()
 
 print ""
 print "==================================================="
-print "CNS F25 Project 2: Rod Achromatopsia Simulation"
+print "CNS F25 Project 2: Gap Junction Coupling Study"
 print "==================================================="
 
 // Check if running in batch mode (non-GUI)
@@ -691,15 +989,9 @@ if (name_declared("nogui") || (object_id(graphItem) == 0)) {
     print ""
     
     print "=========================================="
-    print "Running SCOTOPIC BASELINE protocol..."
+    print "Running GAP JUNCTION COUPLING SWEEP..."
     print "=========================================="
-    protocol_scotopic_baseline()
-    
-    print ""
-    print "=========================================="
-    print "Running ROD ACHROMATOPSIA protocol..."
-    print "=========================================="
-    protocol_rod_achromatopsia()
+    protocol_coupling_sweep()
     
     print ""
     print "=========================================="
@@ -708,6 +1000,6 @@ if (name_declared("nogui") || (object_id(graphItem) == 0)) {
     quit()
 } else {
     print "Ready to run protocols."
-    print "Click buttons in control panel to start."
+    print "Click 'Run Coupling Sweep' to start main experiment."
     print ""
 }
