@@ -766,10 +766,8 @@ proc protocol_coupling_sweep() { local g_gap, intensity_idx, trial_idx, flash_am
     
     // Gap junction conductance values (nS) - 0 to 5 nS in 0.25 nS steps
     g_gap_vec = new Vector()
-    { local g_gap_temp
-        for g_gap_temp = 0; g_gap_temp <= 5.0; g_gap_temp = g_gap_temp + 0.25 {
-            g_gap_vec.append(g_gap_temp)
-        }
+    for g_idx = 0; g_idx <= 20; g_idx = g_idx + 1 {
+        g_gap_vec.append(g_idx * 0.25)
     }
     
     n_trials = 100  // Number of trials per condition for statistics
