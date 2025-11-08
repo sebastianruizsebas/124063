@@ -1,0 +1,213 @@
+// MPI-parallel version of gap junction coupling sweep
+
+// Load base protocol (without the main sweep)
+load_file("simulation_protocol.hoc")
+
+// ============================================================================
+// MPI PARALLEL COUPLING SWEEP
+// ============================================================================
+
+objref pc
+pc = new ParallelContext()
+
+proc protocol_coupling_sweep_mpi() { local g_gap, intensity_idx, trial_idx, flash_amp, nspikes, mean_resp, std_resp, g_idx, int_idx, trial_seed, firing_rate, ln_resp, n_trials, my_rank, num_procs, g_per_proc, g_start, g_end
+    
+    my_rank = pc.id()
+    num_procs = pc.nhost()
+    
+    print "\n"
+    print "============================================================"
+    print "MPI PARALLEL GAP JUNCTION COUPLING SWEEP"
+    print "============================================================"
+    
+    if (my_rank == 0) {
+        printf("Using %d MPI processes\n", num_procs)
+    }
+    
+    // Initialize network once on all processes
+    enable_cone_pathway()
+    create_network()
+    init_noise_generators()
+    setup_noise_update()
+    connect_gaps()
+    connect_synapses()
+    setup_spike_recording()
+    
+    // Stimulus intensities
+    intensity_vec = new Vector()
+    intensity_vec.append(0)
+    intensity_vec.append(5)
+    intensity_vec.append(10)
+    intensity_vec.append(15)
+    intensity_vec.append(20)
+    intensity_vec.append(25)
+    intensity_vec.append(30)
+    intensity_vec.append(35)
+    intensity_vec.append(40)
+    intensity_vec.append(50)
+    intensity_vec.append(60)
+    intensity_vec.append(80)
+    intensity_vec.append(100)
+    
+    // Gap junction conductance values
+    g_gap_vec = new Vector()
+    for g_idx = 0, 20 {
+        g_gap_vec.append(g_idx * 0.25)
+    }
+    
+    n_trials = 100
+    
+    // Distribute gap junction values across processes
+    g_per_proc = int(g_gap_vec.size() / num_procs)
+    g_start = my_rank * g_per_proc
+    g_end = (my_rank == num_procs - 1) ? g_gap_vec.size() : (my_rank + 1) * g_per_proc
+    
+    if (my_rank == 0) {
+        printf("Total: %d coupling values × %d intensities × %d trials = %d simulations\n", \
+               g_gap_vec.size(), intensity_vec.size(), n_trials, \
+               g_gap_vec.size() * intensity_vec.size() * n_trials)
+        printf("Expected speedup: ~%dx with %d processes\n", num_procs, num_procs)
+    }
+    
+    pc.barrier()  // Synchronize all processes
+    
+    // Each process computes its assigned coupling values
+    for g_idx = g_start, g_end-1 {
+        g_gap = g_gap_vec.x[g_idx]
+        
+        if (my_rank == 0 || g_idx == g_start) {
+            printf("Rank %d: Computing g_gap = %.2f nS (coupling %d/%d)\n", \
+                   my_rank, g_gap, g_idx - g_start + 1, g_end - g_start)
+        }
+        
+        set_rod_coupling(g_gap)
+        
+        // Rebuild network with new coupling
+        connect_gaps()
+        connect_synapses()
+        
+        sprint(output_filename, "results_coupling_sweep_g%.2f_trials%d_rank%d.dat", \
+               g_gap, n_trials, my_rank)
+        output_file = new File()
+        output_file.wopen(output_filename)
+        output_file.printf("# Gap junction coupling sweep (MPI rank %d)\n", my_rank)
+        output_file.printf("# g_gap=%g nS, n_trials=%d\n", g_gap, n_trials)
+        output_file.printf("# Poisson_noise=%d, Gaussian_noise=%d (sigma=%g mV)\n", \
+                          POISSON_NOISE_ENABLED, GAUSSIAN_NOISE_ENABLED, gaussian_noise_sigma)
+        output_file.printf("# Intensity(pA)\tTrial\tSpikeCount\tFiringRate(Hz)\tLN_Response\n")
+        
+        // Intensity sweep
+        for int_idx = 0, intensity_vec.size()-1 {
+            flash_amp = intensity_vec.x[int_idx]
+            
+            trial_responses.resize(0)
+            ln_response_vec.resize(0)
+            
+            // Multiple trials for statistics
+            for trial_idx = 0, n_trials-1 {
+                trial_seed = noise_seed + g_idx*10000 + int_idx*100 + trial_idx
+                
+                nspikes = run_trial_with_seed(flash_amp, 0, 100, 1.0, trial_seed)
+                firing_rate = nspikes / ((tstop - stim_init) / 1000)
+                ln_resp = get_ln_response()
+                
+                output_file.printf("%g\t%d\t%d\t%g\t%g\n", \
+                                  flash_amp, trial_idx, nspikes, firing_rate, ln_resp)
+            }
+        }
+        
+        output_file.close()
+    }
+    
+    pc.barrier()  // Wait for all processes to finish
+    
+    if (my_rank == 0) {
+        print "\n============================================================"
+        print "All MPI processes complete!"
+        print "Merging results from all ranks..."
+        print "============================================================"
+        
+        // Merge output files from all ranks
+        merge_mpi_results()
+    }
+    
+    pc.barrier()
+}
+
+proc merge_mpi_results() { local rank, g_idx
+    // Master process (rank 0) merges output files from all ranks
+    
+    objref infile, outfile, lines
+    strdef line, infile_name, outfile_name, cmd
+    
+    printf("Merging %d result files...\n", pc.nhost())
+    
+    for g_idx = 0, g_gap_vec.size()-1 {
+        sprint(outfile_name, "results_coupling_sweep_g%.2f_trials%d.dat", \
+               g_gap_vec.x[g_idx], n_trials)
+        
+        outfile = new File()
+        outfile.wopen(outfile_name)
+        
+        // Write header
+        outfile.printf("# Gap junction coupling sweep (merged from MPI)\n")
+        outfile.printf("# g_gap=%g nS, n_trials=%d, MPI_ranks=%d\n", \
+                      g_gap_vec.x[g_idx], n_trials, pc.nhost())
+        outfile.printf("# Intensity(pA)\tTrial\tSpikeCount\tFiringRate(Hz)\tLN_Response\n")
+        
+        // Concatenate results from all ranks
+        for rank = 0, pc.nhost()-1 {
+            sprint(infile_name, "results_coupling_sweep_g%.2f_trials%d_rank%d.dat", \
+                   g_gap_vec.x[g_idx], n_trials, rank)
+            
+            infile = new File(infile_name)
+            
+            // Skip header lines
+            infile.gets(line)  // Skip comment lines
+            infile.gets(line)
+            infile.gets(line)
+            infile.gets(line)
+            
+            // Copy data lines
+            while (!infile.eof()) {
+                infile.gets(line)
+                if (infile.eof()) break
+                outfile.printf("%s\n", line)
+            }
+            
+            infile.close()
+            
+            // Delete rank-specific file
+            sprint(cmd, "rm %s", infile_name)
+            system(cmd)
+        }
+        
+        outfile.close()
+    }
+    
+    printf("Results merged into results_coupling_sweep_g*.dat\n")
+}
+
+print ""
+print "==================================================="
+print "MPI-Parallel Gap Junction Coupling Study"
+print "==================================================="
+
+// Check if running in MPI mode
+if (pc.nhost() > 1) {
+    if (pc.id() == 0) {
+        print "MPI mode detected!"
+        printf("Running on %d processes\n", pc.nhost())
+    }
+    
+    protocol_coupling_sweep_mpi()
+    
+    if (pc.id() == 0) {
+        print "MPI simulation complete!"
+    }
+    quit()
+} else {
+    if (pc.id() == 0) {
+        print "Single-process mode (use 'nrniv -mpi' to enable MPI)"
+    }
+}
