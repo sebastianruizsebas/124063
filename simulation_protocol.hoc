@@ -766,7 +766,7 @@ proc protocol_coupling_sweep() { local g_gap, intensity_idx, trial_idx, flash_am
     
     // Gap junction conductance values (nS) - 0 to 5 nS in 0.25 nS steps
     g_gap_vec = new Vector()
-    for g_idx = 0; g_idx <= 20; g_idx = g_idx + 1 {
+    for g_idx = 0, 20 {
         g_gap_vec.append(g_idx * 0.25)
     }
     
@@ -779,7 +779,7 @@ proc protocol_coupling_sweep() { local g_gap, intensity_idx, trial_idx, flash_am
            g_gap_vec.size() * intensity_vec.size() * n_trials * tstop / 1000 / 3600)
     
     // Main sweep loop
-    for (g_idx = 0; g_idx < g_gap_vec.size(); g_idx += 1) {
+    for g_idx = 0, g_gap_vec.size()-1 {
         g_gap = g_gap_vec.x[g_idx]
         set_rod_coupling(g_gap)
         
@@ -799,7 +799,7 @@ proc protocol_coupling_sweep() { local g_gap, intensity_idx, trial_idx, flash_am
         printf("\n=== Gap conductance g = %.2f nS ===\n", g_gap)
         
         // Intensity sweep
-        for (int_idx = 0; int_idx < intensity_vec.size(); int_idx += 1) {
+        for int_idx = 0, intensity_vec.size()-1 {
             flash_amp = intensity_vec.x[int_idx]
             
             // Reset trial storage
@@ -809,7 +809,7 @@ proc protocol_coupling_sweep() { local g_gap, intensity_idx, trial_idx, flash_am
             printf("  Intensity %.1f pA: ", flash_amp)
             
             // Multiple trials for statistics
-            for (trial_idx = 0; trial_idx < n_trials; trial_idx += 1) {
+            for trial_idx = 0, n_trials-1 {
                 // Use unique seed per trial for reproducibility
                 trial_seed = noise_seed + g_idx*10000 + int_idx*100 + trial_idx
                 
