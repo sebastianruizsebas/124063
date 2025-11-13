@@ -55,7 +55,7 @@ proc protocol_coupling_sweep_mpi() { local g_gap, intensity_idx, trial_idx, flas
         g_gap_vec.append(g_idx * 0.25)
     }
     
-    n_trials = 100
+    n_trials = 40
     
     // Distribute gap junction values across processes
     g_per_proc = int(g_gap_vec.size() / num_procs)
