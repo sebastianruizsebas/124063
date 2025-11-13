@@ -770,7 +770,7 @@ proc protocol_coupling_sweep() { local g_gap, intensity_idx, trial_idx, flash_am
         g_gap_vec.append(g_idx * 0.25)
     }
     
-    n_trials = 100  // Number of trials per condition for statistics
+    n_trials = 40  // Number of trials per condition for statistics
     
     printf("Running %d coupling values × %d intensities × %d trials = %d simulations\n", \
            g_gap_vec.size(), intensity_vec.size(), n_trials, \
